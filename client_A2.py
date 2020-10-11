@@ -89,36 +89,39 @@ def connect_to_server():
     except IOError as i:
         print("Error: ", i)
 
-
-
     client_socket.send("sync\n".encode())  # sends syncmode request
     response = get_servers_response()  # get the response from the server, we expect it to be "modeok"
     if response == "modeok":
         print(response)
-        return
+
     else:
-        print("CONNECTION NOT IMPLEMENTED!")
+        print(response)
 
 
 def disconnect_from_server():
-
     global client_socket
     global current_state
-    client_socket.close()  # closes the socket
-    current_state = "disconnected"  # changes state to disconnected
-    print(current_state)
+
+    try:
+        client_socket.close()  # closes the socket
+        current_state = "disconnected"  # changes state to disconnected
+        print(current_state)
+    except IOError as e:
+        print(e)
 
 
 def login():
     global current_state
     username = input("Enter desired username: ")  # get username from keyboard
     send_command("login", username)  # send " login <username>\n " as specified in protocol
-    current_state = "authorized"  # changes global variable current_state to "authorized"
     login_status = get_servers_response()  # get response from server if username is ok
     if login_status == "loginok":  # the expected status message from server
+        current_state = "authorized"  # changes global variable current_state to "authorized"
         print("Login OK")
+        print(current_state)
     else:  # if username is taken, send server response to terminal and return to menu
         print(login_status)
+        print(current_state)
         return
 
 
@@ -194,6 +197,20 @@ def get_inbox():
     return
 
 
+def get_joke():
+    command = "joke"
+    argument = ""
+    send_command(command, argument)
+    joke = get_servers_response()
+    RC = 0  # Running count to filter out the "joke" word from the servers response
+    refined_joke = ""
+    for i in joke:
+        if RC > 4:
+            refined_joke += i
+        RC += 1
+    print("The joke from the server is: " + refined_joke)
+
+
 """
 The list of available actions that the user can perform
 Each action is a dictionary with the following fields:
@@ -241,10 +258,7 @@ available_actions = [
     {
         "description": "Get a joke",
         "valid_states": ["connected", "authorized"],
-        # TODO - optional step - implement the joke fetching from the server.
-        # Hint: this part is not described in the protocol. But the command is simple. Try to find
-        # out how it works ;)
-        "function": None
+        "function": get_joke
     },
     {
         "description": "Quit the application",
